@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, sendEmailVerification } from "firebase/auth";
 import app from '../../firebase/firebase.config';
+import { Link } from 'react-router-dom';
 
 
 const auth = getAuth(app);
@@ -9,45 +10,78 @@ const auth = getAuth(app);
 
 const Register = () => {
 
-    const [email,setEmail] = useState('');
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     const handleSubmit = (event) => {
-        event.preventDefault();
 
+        // 1. prevent page refresh
+        event.preventDefault();
+        setSuccess('');
+        setError('');
+        // 2.collect form data
         const email = event.target.email.value;
         const password = event.target.password.value;
-        console.log(email,password);
+        console.log(email, password);
         // create user in firebase
 
-        createUserWithEmailAndPassword(auth,email,password)
-        .then( result => {
-            const loggedUser = result.user;
-            console.log(loggedUser);
-        })
-        .catch(error => {
-            console.error(error);
+        // validate
+        if(!/(?=.*[A-Z])/.test(password)){
+            setError('your password. must be at least 6 characters in length. that it must contain at least one upper case letter')
+            return;
+        }
+        else if(!/(?=.*\d)/.test(password)){
+            setError('your password. must be at least 6 characters in length. that it must contain at least one upper case letter');
+            return;
+        }
+        else if(password.length < 6 ){
+            setError('your password. must be at least 6 characters in length. that it must contain at least one upper case letter');
+            return;
+        }
+        createUserWithEmailAndPassword(auth, email, password)
+            .then(result => {
+                const loggedUser = result.user;
+                console.log(loggedUser);
+                setError('');
+                event.target.reset();
+                setSuccess('User has been register in successfuly')
+                sendVerificationEmail(result.user)
+            })
+            .catch(error => {
+                setError(error.message);
+                console.error(error.message);
+            });
+    }
+    const sendVerificationEmail = (user) =>{
+        sendEmailVerification(auth.currentUser)
+        .then(result =>{
+            console.log(result);
+            alert('please verify your email address')
         })
     }
 
     const handleEmailChange = (event) => {
         // console.log(event.target.value);
-        setEmail(event.target.value);
+        // setEmail(event.target.value);
     }
 
 
-    const handlePasswordBlur = (event) =>{
+    const handlePasswordBlur = (event) => {
         // console.log(event.target.value);
     }
     return (
         <div className='w-50 mx-auto'>
-            <h2>Please Ragistar</h2>
+            <h2 className='text-primary mt-4'>Please Ragistar!!!</h2>
             <form onSubmit={handleSubmit}>
-                <input className='w-50 mb-4 rounded ps-2' onChange={handleEmailChange} type="email" name='email' id='email' placeholder='Your email' />
+                <input className='w-50 mb-4 rounded ps-2' onChange={handleEmailChange} type="email" name='email' id='email' placeholder='Your email' required />
                 <br />
-                <input className='w-50 mb-4 rounded' onBlur={handlePasswordBlur} type="password" name="password" id="password" placeholder='Your password' />
+                <input className='w-50 mb-4 rounded' onBlur={handlePasswordBlur} type="password" name="password" id="password" placeholder='Your password' required />
                 <br />
                 <input className='btn btn-primary' type="submit" value="Register" />
             </form>
+            <p>Already have an account please <Link to="/login">Login</Link> </p>
+            <p className='text-danger'>{error}</p>
+            <p className='text-success'>{success}</p>
         </div>
     );
 };
